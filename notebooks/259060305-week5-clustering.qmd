@@ -1,5 +1,5 @@
 ---
-title: "Week 5 – Clustering Analysis (Online Retail)"
+title: "Week 5 – Clustering Analysis (Online Retail)" 
 author: "Ajay Syam Bandaru"
 format:
   html:
@@ -35,7 +35,8 @@ Here are the steps for cleaning:
 
 - Take out cancelled invoices (those with invoice numbers that start with "C").
 - Take out observations that don't have a Customer ID.
-- Get rid of quantities that aren't positive.- Make a variable for the total price of each transaction.
+- Get rid of quantities that aren't positive.
+- Make a variable for the total price of each transaction.
 
 These steps make sure that the next step, customer-level aggregation, makes sense from an economic point of view and is consistent within the company.
 
@@ -278,3 +279,9 @@ We used K-means clustering to divide customers into different behavioural groups
 The clusters that come out show differences in how engaged customers are and how much money they make. But these segments shouldn't be taken as absolute truths. They show how the modeller chose which features to use, how to scale them, and what assumptions to make about the algorithm.
 
 In general, this task shows that clustering isn't about finding one "correct" number of clusters; it's about understanding how the assumptions we make about representation and modelling affect the structure that comes out. Critical interpretation is thus essential to effective segmentation.
+
+format:
+  pdf:
+    toc: true
+    number-sections: true
+    pdf-engine: xelatex
