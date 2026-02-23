@@ -15,7 +15,6 @@ execute:
 ---
 
 ## 1. Introduction
-
 This analysis employs clustering techniques on the Online Retail dataset to identify behavioural structures within the data. Clustering does not depend on a target variable, unlike predictive modelling tasks. It groups observations together based on how similar their features are.
 
 Clustering is based on distance, so decisions about how to model things, like what unit of analysis to use, how to build features, and how to scale things, have a direct effect on the structure that comes out. So, it's important to carefully explain why these choices were made.
@@ -23,7 +22,6 @@ Clustering is based on distance, so decisions about how to model things, like wh
 The aim of this report is to create, put into action, and critically analyse a customer-level clustering framework that works for retail behavioural segmentation.
 
 ## 2. Unit of Analysis
-
 The customer (Customer ID level) is the unit of analysis that was chosen. Each observation in the clustering dataset is a single customer whose behaviour is described by a set of aggregated behavioural traits based on their transaction history.
 
 Customer-level clustering is suitable since retail segmentation is fundamentally centred on the customer. Most businesses want to know the difference between high-value customers, customers who buy a lot, and customers who might not be interested anymore. Grouping transactions or invoices together would show short-term buying patterns instead of long-term behaviour patterns.
@@ -31,9 +29,7 @@ Customer-level clustering is suitable since retail segmentation is fundamentally
 Combining data at the customer level cuts down on noise from individual transactions and lets consistent patterns of behaviour show up. This modelling choice sets the shape of the clustering space: it looks at how similar customers are based on things like how often, how much, and how recently they spend money.
 
 ## 3. Data Preparation
-Before making behavioural features, the Online Retail dataset needs to be cleaned up so that clustering shows real buying behaviour instead of data artefacts.
-
-Retail transaction data often has invoices that were cancelled, customer IDs that are missing, and wrong amounts. If these problems aren't fixed, they can mess up calculations of money and behaviour.
+Before making behavioural features, the Online Retail dataset needs to be cleaned up so that clustering shows real buying behaviour instead of data artefacts. Retail transaction data often has invoices that were cancelled, customer IDs that are missing, and wrong amounts. If these problems aren't fixed, they can mess up calculations of money and behaviour.
 
 Here are the steps for cleaning:
 
@@ -90,9 +86,7 @@ This feature captures overall economic contribution and differentiates high-valu
 Total Spend may be influenced by extreme purchasers and does not distinguish between frequent small purchases and occasional large purchases.
 
 ### 4.2 Purchase Frequency
-Purchase Frequency counts the number of different invoices that each customer has.
-
-This feature shows how often people buy things and how engaged they are with the brand.
+Purchase Frequency counts the number of different invoices that each customer has. This feature shows how often people buy things and how engaged they are with the brand.
 
 **Limitation:** Frequency doesn't take into account the size of the transaction and may treat small and large purchases the same.
 
@@ -111,9 +105,7 @@ This metric may not be stable for customers who don't buy very often.
 
 ### 4.4 Recency
 
-Recency tells you how many days have passed since a customer last bought something compared to the most recent date in the dataset.
-
-This shows how fresh engagement is and how likely it is to end.
+Recency tells you how many days have passed since a customer last bought something compared to the most recent date in the dataset. This shows how fresh engagement is and how likely it is to end.
 
 **Limitation:** 
 The observation window affects recency, and it doesn't show purchase history outside of the dataset.
@@ -143,11 +135,147 @@ customer_df.head()
 The dataset now has one row for each customer and four behavioural traits. This change turns detailed transaction data into structured behavioural representations that can be used for distance-based clustering. The resulting clusters show long-term buying patterns instead of single purchase events because they group behaviour instead of raw transactions.
 
 ## 5. Scaling
+K-means and other clustering algorithms use Euclidean distance to find similarities between observations. When features are measured on different scales, the ones with bigger numbers have a bigger effect on the distance calculation.
+
+In the dataset that was made, TotalSpend can be in the thousands, but Frequency and Recency are usually much smaller. If you don't scale, the clustering algorithm would mostly group customers based on how much they spent, which would mean that it would ignore other behavioural dimensions.
+
+Scaling makes sure that each feature adds the right amount to the distance metric. This stops one behaviour from having too much of an effect on cluster formation and keeps the feature space's geometric balance.
+
+This analysis uses standardisation (z-score scaling). Each feature is changed so that it has a mean of zero and a standard deviation of one:
+\[
+z = \frac{x - \mu}{\sigma}
+\]
+This transformation ensures that clustering reflects relative behavioural differences rather than absolute magnitudes.
+
+```{python}
+from sklearn.preprocessing import StandardScaler
+
+# Select features for clustering
+features = ["TotalSpend", "Frequency", "Recency", "AvgBasketValue"]
+X = customer_df[features]
+
+# Apply standardisation
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+# Convert back to DataFrame for readability
+X_scaled = pd.DataFrame(X_scaled, columns=features, index=X.index)
+
+X_scaled.head()
+```
+The scaled dataset now shows customers in a standardised behavioural space where each feature has the same effect on Euclidean distance. This change makes sure that clustering isn't based on money scale, but instead shows how similar behaviours are in many ways.
 
 ## 6. K-Means Clustering
+K-means clustering divides observations into \( k \) groups by making the variance within each group as small as possible. The algorithm puts each observation in the cluster center that is closest to it based on Euclidean distance. It then updates the cluster centers until they all come together.
+
+Choosing the right value of \( k \) is an important modelling decision because K-means needs to know how many clusters there are ahead of time. Instead of picking a random number, we look at a range of \( k \) values and look at the Within-Cluster Sum of Squares (WCSS) to see if adding more complexity to the model is worth it.
+
+```{python}
+from sklearn.cluster import KMeans
+import matplotlib.pyplot as plt
+
+wcss = []
+
+for k in range(1, 9):
+    km = KMeans(n_clusters=k, random_state=42, n_init=20)
+    km.fit(X_scaled)
+    wcss.append(km.inertia_)
+
+plt.plot(range(1, 9), wcss, marker='o')
+plt.xlabel("Number of Clusters (k)")
+plt.ylabel("Within-Cluster Sum of Squares")
+plt.title("Elbow Method")
+plt.show()
+```
+The Within-Cluster Sum of Squares (WCSS) goes down as the number of clusters goes up because the clusters get smaller. But usually, the rate of improvement slows down after a certain point. This "elbow" shows how to find a middle ground between making models more complicated and making them easier to understand.
+
+The selected value of \( k \) is determined by identifying the point at which the addition of extra clusters yields progressively smaller decreases in WCSS while preserving interpretability.
+
+```{python}
+# Final K-means model (example: k=3)
+kmeans_model = KMeans(n_clusters=3, random_state=42, n_init=20)
+kmeans_model.fit(X_scaled)
+
+# Add cluster labels to dataset
+customer_df["Cluster"] = kmeans_model.labels_
+
+customer_df.head()
+```
+The last K-means model divides customers into groups based on how they act. Using multiple initialisations (n_init=20) lowers the chance of getting stuck in local minima and makes the solution more stable. Each customer now has a cluster label, which makes it easier to understand how their behaviour differs from others.
 
 ## 7. Cluster Evaluation and Interpretation
+### 7.1 Cluster Sizes
+```{python}
+customer_df["Cluster"].value_counts()
+```
+It's important to know how the sizes of the clusters are spread out. Very small clusters could mean that there are outliers or that the data has been split up too much. Very unbalanced clusters could mean that the value of \( k \) chosen doesn't really divide the behavioural space. Balanced clusters are not necessary, but significant imbalance warrants careful scrutiny.
+
+```{python}
+# Get cluster centres in scaled space
+centers_scaled = kmeans_model.cluster_centers_
+
+# Convert back to original scale
+centers_original = scaler.inverse_transform(centers_scaled)
+
+# Create readable DataFrame
+cluster_centers = pd.DataFrame(
+    centers_original,
+    columns=["TotalSpend", "Frequency", "Recency", "AvgBasketValue"]
+)
+
+cluster_centers
+```
+The average behaviour of customers in each segment is shown by the cluster centers. When the centers are changed back to the original scale, it makes sense to interpret them in terms of money.
+
+We can now describe each cluster in terms of how much they spend, how often they buy, how recently they bought something, and how much their basket is worth.
+
+### Behavioural Interpretation
+Cluster 0 seems to be made up of high-value, high-frequency customers who haven't been around for very long, which shows that they are still interested. These customers are probably loyal and important to the economy.
+
+Cluster 1 has a lower total spend and frequency, but a higher recency. This group of customers may be occasional or possibly not interested in your business.
+
+Cluster 2 may spend moderately but have different basket value characteristics, which could mean they shop in a different way.
+
+### 7.3 PCA Visualisation
+```{python}
+from sklearn.decomposition import PCA
+
+# Reduce to 2 dimensions for visualisation
+pca = PCA(n_components=2)
+X_pca = pca.fit_transform(X_scaled)
+
+pca_df = pd.DataFrame(X_pca, columns=["PC1", "PC2"])
+pca_df["Cluster"] = kmeans_model.labels_
+
+import matplotlib.pyplot as plt
+
+plt.figure(figsize=(8,6))
+plt.scatter(pca_df["PC1"], pca_df["PC2"],
+            c=pca_df["Cluster"], cmap="viridis", alpha=0.6)
+plt.xlabel("PC1")
+plt.ylabel("PC2")
+plt.title("Customer Clusters (PCA Projection)")
+plt.show()
+```
+For visualisation purposes, PCA reduces the high-dimensional behavioural space to two main components. We did clustering in four dimensions, but this projection gives us an easy-to-understand view of how things are separated. Keep in mind that PCA keeps variance, not cluster separation. So, overlapping clusters in two dimensions don't always mean that the original space isn't well separated.
+
+### Critical Evaluation
+The clusters seem to show differences in behaviour mostly when it comes to spending and engagement. K-means, on the other hand, assumes that clusters are spherical and that the variance is the same across groups. This assumption may distort segmentation if behavioural patterns are highly skewed or non-spherical.
 
 ## 8. Sensitivity and Limitations
+Clustering results are not objective truths; they are outcomes shaped by modelling assumptions and design choices. It is important to recognise a number of limitations.
+1. The results depend on the number of clusters \( k \) that you choose. The elbow method helps, but it doesn't give a single correct value. Different values of \( k \) may yield distinct yet viable segmentations.
+2. K-means thinks that the clusters are spherical and tries to minimise the variance within each cluster using Euclidean distance. K-means may create fake boundaries if the real behavioural structure is irregular or based on density.
+3. The results of clustering depend a lot on how the features are built. The selected behavioural variables (Total Spend, Frequency, Recency, and Average Basket Value) delineate similarity. Different structural patterns might come from using different feature representations, like product diversity or seasonal behaviour.
+4. Decisions about scaling have an effect on geometry. Standardisation equalises feature influence, but it also presupposes that all behavioural dimensions should contribute equally to similarity. In real life, some dimensions may be more important to the economy than others.
+5. The analysis is only valid for the time period that was looked at. The available dataset measures recent purchases and spending habits, but it may not show a customer's long-term history.
+These limitations underscore that clustering is a modelling endeavour rather than an absolute segmentation veracity. Interpretation must, therefore, remain prudent and cognisant of context.
 
 ## 9. Conclusion
+This analysis utilised clustering techniques on the Online Retail dataset to identify behavioural patterns among customers. By choosing the customer as the unit of analysis, putting transaction-level data into meaningful behavioural features, and carefully using standardisation, a structured picture of buying behaviour was made.
+
+We used K-means clustering to divide customers into different behavioural groups based on how much they spend, how often they buy, how recently they bought something, and how much their basket is worth. We looked at cluster centers in the original scale so that we could understand them in a way that made sense economically. We also used PCA to show structure in smaller dimensions.
+
+The clusters that come out show differences in how engaged customers are and how much money they make. But these segments shouldn't be taken as absolute truths. They show how the modeller chose which features to use, how to scale them, and what assumptions to make about the algorithm.
+
+In general, this task shows that clustering isn't about finding one "correct" number of clusters; it's about understanding how the assumptions we make about representation and modelling affect the structure that comes out. Critical interpretation is thus essential to effective segmentation.
