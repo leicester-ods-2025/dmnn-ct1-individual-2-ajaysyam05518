@@ -1,17 +1,7 @@
 ---
-title: "Week 5 – Clustering Analysis (Online Retail)" 
+title: "Week 5 – Clustering Analysis (Online Retail)"
 author: "Ajay Syam Bandaru"
-format:
-  html:
-    toc: true
-    number-sections: true
-  pdf:
-    toc: true
-    number-sections: true
-format:
-  html:
-    toc: true
-    number-sections: true
+
 format:
   html:
     toc: true
@@ -20,7 +10,8 @@ format:
     toc: true
     number-sections: true
     pdf-engine: xelatex
- 
+
+execute:
   warning: false
   message: false
   error: false
