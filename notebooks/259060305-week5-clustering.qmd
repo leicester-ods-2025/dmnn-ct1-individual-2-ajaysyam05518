@@ -231,11 +231,9 @@ The average behaviour of customers in each segment is shown by the cluster cente
 We can now describe each cluster in terms of how much they spend, how often they buy, how recently they bought something, and how much their basket is worth.
 
 ### Behavioural Interpretation
-Cluster 0 seems to be made up of high-value, high-frequency customers who haven't been around for very long, which shows that they are still interested. These customers are probably loyal and important to the economy.
-
-Cluster 1 has a lower total spend and frequency, but a higher recency. This group of customers may be occasional or possibly not interested in your business.
-
-Cluster 2 may spend moderately but have different basket value characteristics, which could mean they shop in a different way.
+Cluster 0 is characterised by high total spend, high purchase frequency, and low recency values, indicating economically valuable and actively engaged customers. This segment likely represents loyal core customers.
+Cluster 1 exhibits lower monetary contribution and higher recency, suggesting infrequent or potentially dormant customers.
+Cluster 2 demonstrates moderate spending with distinct basket value characteristics, indicating differentiated purchasing structure rather than intensity.
 
 ### PCA Visualisation
 ```{python}
